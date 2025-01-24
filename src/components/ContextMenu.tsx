@@ -28,8 +28,8 @@ const BasicMenu: React.FC<BasicMenuProps> = ({ x, y, visible, menuItems }) => {
 
     return (
         <div style={{
-            position: 'absolute',
-            top: y-150,
+            position: 'fixed',
+            top: y,
             left: x,
             backgroundColor: 'white',
             border: '1px solid #ccc',

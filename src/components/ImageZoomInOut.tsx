@@ -19,7 +19,7 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems }) 
 
     const [scale, setScale] = useState(1);
     const [position, setPosition] = useState({x:0,y:0});
-    const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, items: menuItems});
+    const [contextMenu, setContextMenu] = useState({ visible: true, x: 0, y: 0, items: menuItems});
 
     const imageRef = useRef<HTMLImageElement | null>(null);
 
@@ -44,18 +44,20 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems }) 
     useEffect(() => {
         const image = imageRef.current;
         if (!image) return;
+        const container = image.parentElement;
+        if (!container) return;
 
         let isDragging = false;
         let prevPosition = {x:0,y:0};
 
         const handleMouseDown = (e: MouseEvent) => {
             isDragging = true;
-            setContextMenu({ ...contextMenu, visible: false });
             prevPosition = {x: e.clientX, y: e.clientY};
         };
         
         const handleMouseMove = (e: MouseEvent) => {
             if (!isDragging) return;
+            setContextMenu({ ...contextMenu, visible: false });
             //Difference between current and last position
             const deltaX = e.clientX - prevPosition.x;
             const deltaY = e.clientY - prevPosition.y;
@@ -80,7 +82,7 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems }) 
             const mouseY = e.clientY - rect.top; // Mouse Y position relative to the image
 
             const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9; // Zoom in for scroll up, zoom out for scroll down
-            const newScale = Math.max(0.5, scale * zoomFactor); // Calculate new scaling make sure you can't zoom out more than 0.5
+            const newScale = Math.max(0.1, scale * zoomFactor); // Calculate new scaling make sure you can't zoom out more than 0.5
             const offsetX = (mouseX - rect.width / 2); // Offset from image center, adjusted for scale
             const offsetY = (mouseY - rect.height / 2);
 
@@ -94,22 +96,22 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems }) 
         };
         
         //Add event listeners
-        image.addEventListener("mousedown", handleMouseDown);
-        image.addEventListener("mousemove", handleMouseMove);
-        image.addEventListener("mouseup", handleMouseRelease);
-        image.addEventListener('wheel', handleWheel);
+        container.addEventListener("mousedown", handleMouseDown);
+        container.addEventListener("mousemove", handleMouseMove);
+        container.addEventListener("mouseup", handleMouseRelease);
+        container.addEventListener('wheel', handleWheel);
         return () => {
             //Clean up event listeners
-            image.removeEventListener("mousedown", handleMouseDown);
-            image.removeEventListener("mousemove", handleMouseMove);
-            image.removeEventListener("mouseup", handleMouseRelease);
-            image.removeEventListener('wheel', handleWheel);
+            container.removeEventListener("mousedown", handleMouseDown);
+            container.removeEventListener("mousemove", handleMouseMove);
+            container.removeEventListener("mouseup", handleMouseRelease);
+            container.removeEventListener('wheel', handleWheel);
         }   
     }, [ imageRef, scale ]);
 
-    // Gurantee that the view isn't zoomed out more than 0.5
-    if (scale < 0.5) {
-        setScale(0.5)
+    // Gurantee that the view isn't zoomed out more than 10x
+    if (scale < 0.1) {
+        setScale(0.1)
     }
 
     return <div style={{backgroundColor: "#302f2f", borderRadius: "10px", position: "relative", overflow: "hidden"}} onContextMenu={handleRightClick}>
