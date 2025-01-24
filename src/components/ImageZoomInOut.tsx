@@ -1,16 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react'
-import './ImageZoomInOut.css'
+import './ImageZoomInOut.css';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
+import BasicMenu from './BasicMenu';
+
+interface MenuItemProps {
+    label: string;
+    onClick: () => void;
+}
 
 interface ImageZoomInOutProps {
     imageUrl: string;
+    BasicMenu: React.FC<{ x: number; y: number; visible: boolean, menuItems: MenuItemProps[]}>;
+    menuItems: MenuItemProps[];
 }
 
-const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl }) => {
+const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems }) => {
 
     const [scale, setScale] = useState(1);
     const [position, setPosition] = useState({x:0,y:0});
+    const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, items: menuItems});
 
     const imageRef = useRef<HTMLImageElement | null>(null);
 
@@ -22,6 +31,16 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl }) => {
         setScale((prevScale) => Math.max(0.1, prevScale - 0.1));
     };
 
+    const handleRightClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        e.preventDefault(); // Prevent default context menu
+        setContextMenu({
+            visible: true,
+            x: e.clientX,
+            y: e.clientY,
+            items: contextMenu.items,
+        });
+    };
+
     useEffect(() => {
         const image = imageRef.current;
         if (!image) return;
@@ -31,14 +50,18 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl }) => {
 
         const handleMouseDown = (e: MouseEvent) => {
             isDragging = true;
+            setContextMenu({ ...contextMenu, visible: false });
             prevPosition = {x: e.clientX, y: e.clientY};
         };
         
         const handleMouseMove = (e: MouseEvent) => {
             if (!isDragging) return;
+            //Difference between current and last position
             const deltaX = e.clientX - prevPosition.x;
             const deltaY = e.clientY - prevPosition.y;
+            //Update last position
             prevPosition = {x: e.clientX, y: e.clientY};
+            //Update current position
             setPosition((position) => ({
                 x: position.x + deltaX,
                 y: position.y + deltaY,
@@ -89,7 +112,7 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl }) => {
         setScale(0.5)
     }
 
-    return <div style={{backgroundColor: "#fffff", borderRadius: "10px", position: "relative", overflow: "hidden"}}>
+    return <div style={{backgroundColor: "#302f2f", borderRadius: "10px", position: "relative", overflow: "hidden"}} onContextMenu={handleRightClick}>
         <div className="btn-container">
             <button onClick={handleZoomIn}>
                 <AddIcon/>
@@ -100,6 +123,7 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl }) => {
         </div>
 
         <img ref={imageRef} src={imageUrl} alt="" style={{width: "150vh", height: "auto", cursor: "grab", transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,}} draggable={false}/>
+        <BasicMenu x={contextMenu.x} y={contextMenu.y} visible={contextMenu.visible} menuItems={contextMenu.items} />
     </div>;
 };
 

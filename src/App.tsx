@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import './App.css'
 import ImageZoomInOut from './components/ImageZoomInOut';
+import BasicMenu from './components/BasicMenu';
 
 function App() {
 
@@ -11,11 +12,16 @@ function App() {
     }
     setMap(URL.createObjectURL(target.files[0]));
   }
+  const contextMenu = [
+    { label: 'Town', onClick: () => alert('Town clicked!') },
+    { label: 'City', onClick: () => alert('City clicked!') },
+    { label: 'Other', onClick: () => alert('Other clicked!') },
+];
 
   return (
     <>
       <input type="file" name="image" onChange={handleOnChange}/> 
-      <ImageZoomInOut imageUrl={map}/>
+      <ImageZoomInOut imageUrl={map} menuItems={contextMenu} BasicMenu={BasicMenu}/>
     </>
   )
 }
