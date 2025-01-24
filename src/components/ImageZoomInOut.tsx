@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import './ImageZoomInOut.css';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
-import BasicMenu from './BasicMenu';
+import BasicMenu from './ContextMenu';
 
 interface MenuItemProps {
     label: string;

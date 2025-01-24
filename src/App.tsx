@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import './App.css'
 import ImageZoomInOut from './components/ImageZoomInOut';
-import BasicMenu from './components/BasicMenu';
+import BasicMenu from './components/ContextMenu';
 
 function App() {
 
