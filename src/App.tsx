@@ -4,7 +4,7 @@ import ImageZoomInOut from './components/ImageZoomInOut';
 
 function App() {
 
-  const [map, setMap] = useState<string>('state');
+  const [map, setMap] = useState<string>('state'); // useState for storing the map file.
   async function handleOnChange(e: React.FormEvent<HTMLInputElement>) {
     const target = e.target as HTMLInputElement & {
       files: FileList;
@@ -15,7 +15,6 @@ function App() {
   return (
     <>
       <input type="file" name="image" onChange={handleOnChange}/> 
-
       <ImageZoomInOut imageUrl={map}/>
     </>
   )

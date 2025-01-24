@@ -18,10 +18,8 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl }) => {
         setScale((scale) => scale + 0.1);
     };
     const handleZoomOut = () => {
+        //Make sure you can't zoom out into the negative
         setScale((prevScale) => Math.max(0.1, prevScale - 0.1));
-        if (scale < 0.5) {
-            setScale(0.5)
-        }
     };
 
     useEffect(() => {
@@ -59,8 +57,7 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl }) => {
             const mouseY = e.clientY - rect.top; // Mouse Y position relative to the image
 
             const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9; // Zoom in for scroll up, zoom out for scroll down
-            const newScale = Math.max(0.5, scale * zoomFactor);
-
+            const newScale = Math.max(0.5, scale * zoomFactor); // Calculate new scaling make sure you can't zoom out more than 0.5
             const offsetX = (mouseX - rect.width / 2); // Offset from image center, adjusted for scale
             const offsetY = (mouseY - rect.height / 2);
 
@@ -73,11 +70,13 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl }) => {
             setScale(newScale);
         };
         
+        //Add event listeners
         image.addEventListener("mousedown", handleMouseDown);
         image.addEventListener("mousemove", handleMouseMove);
         image.addEventListener("mouseup", handleMouseRelease);
         image.addEventListener('wheel', handleWheel);
         return () => {
+            //Clean up event listeners
             image.removeEventListener("mousedown", handleMouseDown);
             image.removeEventListener("mousemove", handleMouseMove);
             image.removeEventListener("mouseup", handleMouseRelease);
@@ -85,6 +84,7 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl }) => {
         }   
     }, [ imageRef, scale ]);
 
+    // Gurantee that the view isn't zoomed out more than 0.5
     if (scale < 0.5) {
         setScale(0.5)
     }
