@@ -2,24 +2,36 @@ import React, { useEffect, useRef, useState } from 'react'
 import './ImageZoomInOut.css';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
-import BasicMenu from './ContextMenu';
+import ContextMenu from './ContextMenu';
+import markerImage from '../assets/marker.png';
 
 interface MenuItemProps {
     label: string;
     onClick: () => void;
 }
+interface mapItem {
+    type: string;
+    location: {x: number, y: number};
+}
+  
 
 interface ImageZoomInOutProps {
     imageUrl: string;
-    BasicMenu: React.FC<{ x: number; y: number; visible: boolean, menuItems: MenuItemProps[]}>;
+    //BasicMenu: React.FC<{ x: number; y: number; visible: boolean; menuItems: MenuItemProps[], onMenuItemClick: (label: string) => void; position: { x: number; y: number } | null;}>;
     menuItems: MenuItemProps[];
+    onMenuItemClick: (type: string, position: { x: number; y: number }) => void;
+    mapItems: mapItem[];
 }
 
-const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems }) => {
+const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, onMenuItemClick, mapItems}) => {
 
     const [scale, setScale] = useState(1);
     const [position, setPosition] = useState({x:0,y:0});
     const [contextMenu, setContextMenu] = useState({ visible: true, x: 0, y: 0, items: menuItems});
+    const [contextMenuPosition, setContextMenuPosition] = useState<{
+        x: number;
+        y: number;
+      } | null>(null);
 
     const imageRef = useRef<HTMLImageElement | null>(null);
 
@@ -32,13 +44,21 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems }) 
     };
 
     const handleRightClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        const image = imageRef.current;
+        if (!image) return;
+        const rect = image.getBoundingClientRect();
         e.preventDefault(); // Prevent default context menu
+        menuItems.forEach((item) => {
+            item.onClick = () => onMenuItemClick(item.label, position);
+        });
         setContextMenu({
             visible: true,
             x: e.clientX,
             y: e.clientY,
             items: contextMenu.items,
         });
+        const position = { x: (e.clientX - rect.width / 2), y: (e.clientY - rect.height / 2) };
+        setContextMenuPosition(position);
     };
 
     useEffect(() => {
@@ -117,15 +137,55 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems }) 
     return <div style={{backgroundColor: "#302f2f", borderRadius: "10px", position: "relative", overflow: "hidden"}} onContextMenu={handleRightClick}>
         <div className="btn-container">
             <button onClick={handleZoomIn}>
+                {position.x}
+                /
+                {position.y}
                 <AddIcon/>
             </button>
             <button onClick={handleZoomOut}>
                 <RemoveIcon/>
             </button>
+            <ul>
+                {mapItems.map((item, index) => (
+                    <li key={index}>{item.type} | {item.location.x} {item.location.y}</li>
+                 ))}
+            </ul>
         </div>
 
-        <img ref={imageRef} src={imageUrl} alt="" style={{width: "150vh", height: "auto", cursor: "grab", transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,}} draggable={false}/>
-        <BasicMenu x={contextMenu.x} y={contextMenu.y} visible={contextMenu.visible} menuItems={contextMenu.items} />
+        {mapItems.map((item, index) => {
+                const image = imageRef.current;
+                if (!image) return;
+                //const scaledX = item.location.x + position.x;
+                //const scaledY = item.location.y + position.y;
+                const scaledX = (item.location.x - position.x) * scale
+                const scaledY = (item.location.y - position.y) * scale 
+
+                return (
+                    <img
+                        key={index}
+                        src={markerImage}
+                        style={{
+                            position: 'absolute',
+                            transform: `translate(${scaledX}px, ${scaledY}px) scale(${scale})`,
+                            zIndex: 10000,
+                        }}
+                        draggable={false}
+                    />
+                );
+            })}
+        <img ref={imageRef} src={imageUrl} alt="" style={{position: "relative", width: "150vh", height: "auto", cursor: "grab", transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,}} draggable={false}/>
+        <ContextMenu x={contextMenu.x}
+        y={contextMenu.y}
+        visible={contextMenu.visible}
+        menuItems={contextMenu.items}
+        onMenuItemClick={(label) => {
+            if (contextMenuPosition) {
+              onMenuItemClick(label, contextMenuPosition);
+            }
+          }}
+        position={contextMenuPosition}
+          
+          />
     </div>;
 };
 

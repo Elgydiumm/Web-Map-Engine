@@ -5,7 +5,6 @@ import MenuItem from '@mui/material/MenuItem';
 
 interface MenuItemProps {
     label: string;
-    onClick: () => void;
 }
 
 interface BasicMenuProps {
@@ -13,10 +12,13 @@ interface BasicMenuProps {
     y: number;
     visible: boolean;
     menuItems: MenuItemProps[];
+    onMenuItemClick: (label: string) => void;
+    position: { x: number; y: number } | null;
 }
 
-const BasicMenu: React.FC<BasicMenuProps> = ({ x, y, visible, menuItems }) => {
+const BasicMenu: React.FC<BasicMenuProps> = ({ x, y, visible, menuItems, onMenuItemClick, position}) => {
     if (!visible) return null;
+    if (!position) return null;
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
     const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -58,10 +60,7 @@ const BasicMenu: React.FC<BasicMenuProps> = ({ x, y, visible, menuItems }) => {
                 {menuItems.map((item, index) => (
                     <MenuItem
                         key={index}
-                        onClick={() => {
-                            item.onClick();
-                            handleClose(); // Close the menu after clicking an item
-                        }}
+                        onClick={() => onMenuItemClick(item.label)}
                     >
                         {item.label}
                     </MenuItem>
