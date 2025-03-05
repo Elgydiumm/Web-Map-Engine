@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import './App.css'
 import ImageZoomInOut from './components/ImageZoomInOut';
-import BasicMenu from './components/ContextMenu';
+
 
 interface mapItem {
   type: string;
@@ -11,10 +11,6 @@ interface mapItem {
 function App() {
 
   const [map, setMap] = useState<string>('state'); // useState for storing the map file.
-  const [contextMenuPosition, setContextMenuPosition] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
   const [markers, setMarkers] = useState<mapItem[]>([]);
   
   async function handleOnChange(e: React.FormEvent<HTMLInputElement>) {
