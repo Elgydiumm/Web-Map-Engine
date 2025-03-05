@@ -14,10 +14,8 @@ interface mapItem {
     location: {x: number, y: number};
 }
   
-
 interface ImageZoomInOutProps {
     imageUrl: string;
-    //BasicMenu: React.FC<{ x: number; y: number; visible: boolean; menuItems: MenuItemProps[], onMenuItemClick: (label: string) => void; position: { x: number; y: number } | null;}>;
     menuItems: MenuItemProps[];
     onMenuItemClick: (type: string, position: { x: number; y: number }) => void;
     mapItems: mapItem[];
@@ -35,10 +33,22 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
 
     const imageRef = useRef<HTMLImageElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
+    const positionRef = useRef(position);
+    const scaleRef = useRef(scale);
+    
+    // Keep refs in sync with state
+    useEffect(() => {
+        positionRef.current = position;
+    }, [position]);
+    
+    useEffect(() => {
+        scaleRef.current = scale;
+    }, [scale]);
 
     const handleZoomIn = () => {
         setScale((scale) => scale + 0.1);
     };
+    
     const handleZoomOut = () => {
         //Make sure you can't zoom out into the negative
         setScale((prevScale) => Math.max(0.1, prevScale - 0.1));
@@ -90,16 +100,19 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
         
         const handleMouseMove = (e: MouseEvent) => {
             if (!isDragging) return;
-            setContextMenu({ ...contextMenu, visible: false });
+            setContextMenu((menu) => ({ ...menu, visible: false }));
+            
             //Difference between current and last position
             const deltaX = e.clientX - prevPosition.x;
             const deltaY = e.clientY - prevPosition.y;
+            
             //Update last position
             prevPosition = {x: e.clientX, y: e.clientY};
+            
             //Update current position
-            setPosition((position) => ({
-                x: position.x + deltaX,
-                y: position.y + deltaY,
+            setPosition((pos) => ({
+                x: pos.x + deltaX,
+                y: pos.y + deltaY,
             }));
         };
 
@@ -109,23 +122,29 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
 
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
-
+            
+            // Use current values from refs
+            const currentPosition = positionRef.current;
+            const currentScale = scaleRef.current;
+        
             const rect = container.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left; // Mouse X position relative to the container
-            const mouseY = e.clientY - rect.top; // Mouse Y position relative to the container
-
-            const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9; // Zoom in for scroll up, zoom out for scroll down
-            const newScale = Math.max(0.1, scale * zoomFactor); // Calculate new scaling make sure you can't zoom out more than 0.1
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+        
+            // Calculate zoom factor based on scroll direction
+            const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+            const newScale = Math.max(0.1, currentScale * zoomFactor);
             
-            // Calculate the position of the mouse relative to the image in image coordinates
-            const mouseImageX = (mouseX - position.x) / scale;
-            const mouseImageY = (mouseY - position.y) / scale;
+            // Calculate mouse position relative to image at current scale
+            const mouseImageX = (mouseX - currentPosition.x) / currentScale;
+            const mouseImageY = (mouseY - currentPosition.y) / currentScale;
             
-            // After zoom, calculate where the new position should be to keep mouse point fixed
-            const newX = mouseX - mouseImageX * newScale;
-            const newY = mouseY - mouseImageY * newScale;
+            // Calculate new position that keeps the point under mouse fixed during zoom
+            const newPosX = mouseX - mouseImageX * newScale;
+            const newPosY = mouseY - mouseImageY * newScale;
             
-            setPosition({ x: newX, y: newY });
+            // Update state with new values
+            setPosition({ x: newPosX, y: newPosY });
             setScale(newScale);
         };
         
@@ -134,16 +153,23 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
         container.addEventListener("mousemove", handleMouseMove);
         container.addEventListener("mouseup", handleMouseRelease);
         container.addEventListener('wheel', handleWheel);
+        
+        // Also catch mouse releases outside the container
+        document.addEventListener("mouseup", handleMouseRelease);
+        document.addEventListener("mouseleave", handleMouseRelease);
+        
         return () => {
             //Clean up event listeners
             container.removeEventListener("mousedown", handleMouseDown);
             container.removeEventListener("mousemove", handleMouseMove);
             container.removeEventListener("mouseup", handleMouseRelease);
             container.removeEventListener('wheel', handleWheel);
+            document.removeEventListener("mouseup", handleMouseRelease);
+            document.removeEventListener("mouseleave", handleMouseRelease);
         }   
-    }, [ imageRef, containerRef, scale ]);
+    }, [imageRef, containerRef]); // Removed position and scale from dependencies
 
-    // Gurantee that the view isn't zoomed out more than 10x
+    // Guarantee that the view isn't zoomed out more than 10x
     if (scale < 0.1) {
         setScale(0.1)
     }
@@ -194,7 +220,7 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
                             position: 'absolute',
                             left: `${item.location.x}px`,
                             top: `${item.location.y}px`,
-                            transform: 'translate(-50%, -50%)', // Center the marker on the point
+                            transform: 'translate(-50%, -50%)',
                             width: '24px',
                             height: '24px',
                             zIndex: 1000,
