@@ -27,7 +27,7 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
 
     const [scale, setScale] = useState(1);
     const [position, setPosition] = useState({x:0,y:0});
-    const [contextMenu, setContextMenu] = useState({ visible: true, x: 0, y: 0, items: menuItems});
+    const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, items: menuItems});
     const [contextMenuPosition, setContextMenuPosition] = useState<{
         x: number;
         y: number;
