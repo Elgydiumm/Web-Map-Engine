@@ -34,6 +34,7 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
       } | null>(null);
 
     const imageRef = useRef<HTMLImageElement | null>(null);
+    const containerRef = useRef<HTMLDivElement | null>(null);
 
     const handleZoomIn = () => {
         setScale((scale) => scale + 0.1);
@@ -45,27 +46,39 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
 
     const handleRightClick = (e: React.MouseEvent<HTMLDivElement>) => {
         const image = imageRef.current;
-        if (!image) return;
-        const rect = image.getBoundingClientRect();
+        const container = containerRef.current;
+        if (!image || !container) return;
+
         e.preventDefault(); // Prevent default context menu
+
+        const containerRect = container.getBoundingClientRect();
+        
+        // Calculate click position relative to container
+        const clickX = e.clientX - containerRect.left;
+        const clickY = e.clientY - containerRect.top;
+        
+        // Convert to image coordinates (accounting for current scale and position)
+        const imageX = (clickX - position.x) / scale;
+        const imageY = (clickY - position.y) / scale;
+        
         menuItems.forEach((item) => {
-            item.onClick = () => onMenuItemClick(item.label, position);
+            item.onClick = () => onMenuItemClick(item.label, { x: imageX, y: imageY });
         });
+        
         setContextMenu({
             visible: true,
             x: e.clientX,
             y: e.clientY,
-            items: contextMenu.items,
+            items: menuItems,
         });
-        const position = { x: (e.clientX - rect.width / 2), y: (e.clientY - rect.height / 2) };
-        setContextMenuPosition(position);
+        
+        setContextMenuPosition({ x: imageX, y: imageY });
     };
 
     useEffect(() => {
         const image = imageRef.current;
-        if (!image) return;
-        const container = image.parentElement;
-        if (!container) return;
+        const container = containerRef.current;
+        if (!image || !container) return;
 
         let isDragging = false;
         let prevPosition = {x:0,y:0};
@@ -97,21 +110,22 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
 
-            const rect = image.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left; // Mouse X position relative to the image
-            const mouseY = e.clientY - rect.top; // Mouse Y position relative to the image
+            const rect = container.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left; // Mouse X position relative to the container
+            const mouseY = e.clientY - rect.top; // Mouse Y position relative to the container
 
             const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9; // Zoom in for scroll up, zoom out for scroll down
-            const newScale = Math.max(0.1, scale * zoomFactor); // Calculate new scaling make sure you can't zoom out more than 0.5
-            const offsetX = (mouseX - rect.width / 2); // Offset from image center, adjusted for scale
-            const offsetY = (mouseY - rect.height / 2);
-
-            // Calculate the new position to keep the mouse as the zoom focus
-            setPosition((prevPosition) => ({
-                x: prevPosition.x - offsetX * (zoomFactor - 1),
-                y: prevPosition.y - offsetY * (zoomFactor - 1),
-            }));
-
+            const newScale = Math.max(0.1, scale * zoomFactor); // Calculate new scaling make sure you can't zoom out more than 0.1
+            
+            // Calculate the position of the mouse relative to the image in image coordinates
+            const mouseImageX = (mouseX - position.x) / scale;
+            const mouseImageY = (mouseY - position.y) / scale;
+            
+            // After zoom, calculate where the new position should be to keep mouse point fixed
+            const newX = mouseX - mouseImageX * newScale;
+            const newY = mouseY - mouseImageY * newScale;
+            
+            setPosition({ x: newX, y: newY });
             setScale(newScale);
         };
         
@@ -127,66 +141,82 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
             container.removeEventListener("mouseup", handleMouseRelease);
             container.removeEventListener('wheel', handleWheel);
         }   
-    }, [ imageRef, scale ]);
+    }, [ imageRef, containerRef, scale ]);
 
     // Gurantee that the view isn't zoomed out more than 10x
     if (scale < 0.1) {
         setScale(0.1)
     }
 
-    return <div style={{backgroundColor: "#302f2f", borderRadius: "10px", position: "relative", overflow: "hidden"}} onContextMenu={handleRightClick}>
-        <div className="btn-container">
-            <button onClick={handleZoomIn}>
-                {position.x}
-                /
-                {position.y}
-                <AddIcon/>
-            </button>
-            <button onClick={handleZoomOut}>
-                <RemoveIcon/>
-            </button>
-            <ul>
+    return (
+        <div 
+            ref={containerRef}
+            style={{
+                backgroundColor: "#302f2f", 
+                borderRadius: "10px", 
+                position: "relative", 
+                overflow: "hidden", 
+                height: "80vh", 
+                width: "100%"
+            }} 
+            onContextMenu={handleRightClick}
+        >
+            <div className="btn-container">
+                <button onClick={handleZoomIn}><AddIcon/></button>
+                <button onClick={handleZoomOut}><RemoveIcon/></button>
+                <ul>
+                    {mapItems.map((item, index) => (
+                        <li key={index}>{item.type} | {Math.round(item.location.x)} {Math.round(item.location.y)}</li>
+                    ))}
+                </ul>
+            </div>
+
+            <div style={{
+                position: "relative",
+                transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                transformOrigin: '0 0',
+                width: 'fit-content',
+                height: 'fit-content'
+            }}>
+                <img 
+                    ref={imageRef} 
+                    src={imageUrl} 
+                    alt="" 
+                    style={{width: "150vh", height: "auto", cursor: "grab"}} 
+                    draggable={false}
+                />
+                
                 {mapItems.map((item, index) => (
-                    <li key={index}>{item.type} | {item.location.x} {item.location.y}</li>
-                 ))}
-            </ul>
-        </div>
-
-        {mapItems.map((item, index) => {
-                const image = imageRef.current;
-                if (!image) return;
-                //const scaledX = item.location.x + position.x;
-                //const scaledY = item.location.y + position.y;
-                const scaledX = (item.location.x - position.x) * scale
-                const scaledY = (item.location.y - position.y) * scale 
-
-                return (
                     <img
                         key={index}
                         src={markerImage}
                         style={{
                             position: 'absolute',
-                            transform: `translate(${scaledX}px, ${scaledY}px) scale(${scale})`,
-                            zIndex: 10000,
+                            left: `${item.location.x}px`,
+                            top: `${item.location.y}px`,
+                            transform: 'translate(-50%, -50%)', // Center the marker on the point
+                            width: '24px',
+                            height: '24px',
+                            zIndex: 1000,
                         }}
+                        alt={item.type}
                         draggable={false}
                     />
-                );
-            })}
-        <img ref={imageRef} src={imageUrl} alt="" style={{position: "relative", width: "150vh", height: "auto", cursor: "grab", transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,}} draggable={false}/>
-        <ContextMenu x={contextMenu.x}
-        y={contextMenu.y}
-        visible={contextMenu.visible}
-        menuItems={contextMenu.items}
-        onMenuItemClick={(label) => {
-            if (contextMenuPosition) {
-              onMenuItemClick(label, contextMenuPosition);
-            }
-          }}
-        position={contextMenuPosition}
-          
-          />
-    </div>;
+                ))}
+            </div>
+            
+            <ContextMenu 
+                x={contextMenu.x}
+                y={contextMenu.y}
+                visible={contextMenu.visible}
+                menuItems={contextMenu.items}
+                onMenuItemClick={(label) => {
+                    if (contextMenuPosition) onMenuItemClick(label, contextMenuPosition);
+                }}
+                position={contextMenuPosition}
+            />
+        </div>
+    );
 };
 
 export default ImageZoomInOut
