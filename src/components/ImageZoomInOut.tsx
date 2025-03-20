@@ -9,9 +9,12 @@ interface MenuItemProps {
     label: string;
     onClick: () => void;
 }
+
 interface mapItem {
     type: string;
     location: {x: number, y: number};
+    id: string;
+    clickable?: boolean;
 }
   
 interface ImageZoomInOutProps {
@@ -19,9 +22,11 @@ interface ImageZoomInOutProps {
     menuItems: MenuItemProps[];
     onMenuItemClick: (type: string, position: { x: number; y: number }) => void;
     mapItems: mapItem[];
+    onMapItemClick: (itemId: string) => void;
+    selectedMarkerId?: string | null;
 }
 
-const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, onMenuItemClick, mapItems}) => {
+const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, onMenuItemClick, mapItems, onMapItemClick, selectedMarkerId}) => {
 
     const [scale, setScale] = useState(1);
     const [position, setPosition] = useState({x:0,y:0});
@@ -36,7 +41,6 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
     const positionRef = useRef(position);
     const scaleRef = useRef(scale);
     
-    // Keep refs in sync with state
     useEffect(() => {
         positionRef.current = position;
     }, [position]);
@@ -59,7 +63,7 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
         const container = containerRef.current;
         if (!image || !container) return;
 
-        e.preventDefault(); // Prevent default context menu
+        e.preventDefault();
 
         const containerRect = container.getBoundingClientRect();
         
@@ -100,16 +104,14 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
         
         const handleMouseMove = (e: MouseEvent) => {
             if (!isDragging) return;
+
             setContextMenu((menu) => ({ ...menu, visible: false }));
             
-            //Difference between current and last position
             const deltaX = e.clientX - prevPosition.x;
             const deltaY = e.clientY - prevPosition.y;
             
-            //Update last position
             prevPosition = {x: e.clientX, y: e.clientY};
-            
-            //Update current position
+
             setPosition((pos) => ({
                 x: pos.x + deltaX,
                 y: pos.y + deltaY,
@@ -123,7 +125,6 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
             
-            // Use current values from refs
             const currentPosition = positionRef.current;
             const currentScale = scaleRef.current;
         
@@ -143,18 +144,15 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
             const newPosX = mouseX - mouseImageX * newScale;
             const newPosY = mouseY - mouseImageY * newScale;
             
-            // Update state with new values
             setPosition({ x: newPosX, y: newPosY });
             setScale(newScale);
         };
         
-        //Add event listeners
         container.addEventListener("mousedown", handleMouseDown);
         container.addEventListener("mousemove", handleMouseMove);
         container.addEventListener("mouseup", handleMouseRelease);
         container.addEventListener('wheel', handleWheel);
         
-        // Also catch mouse releases outside the container
         document.addEventListener("mouseup", handleMouseRelease);
         document.addEventListener("mouseleave", handleMouseRelease);
         
@@ -167,9 +165,8 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
             document.removeEventListener("mouseup", handleMouseRelease);
             document.removeEventListener("mouseleave", handleMouseRelease);
         }   
-    }, [imageRef, containerRef]); // Removed position and scale from dependencies
+    }, [imageRef, containerRef]);
 
-    // Guarantee that the view isn't zoomed out more than 10x
     if (scale < 0.1) {
         setScale(0.1)
     }
@@ -224,9 +221,13 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
                             width: '24px',
                             height: '24px',
                             zIndex: 1000,
+                            cursor: item.clickable ? 'pointer' : 'default',
+                            border: selectedMarkerId === item.id ? '2px solid yellow' : 'none',
+                            filter: selectedMarkerId === item.id ? 'drop-shadow(0 0 4px gold)' : 'none'
                         }}
                         alt={item.type}
                         draggable={false}
+                        onClick={() => item.clickable && onMapItemClick(item.id)}
                     />
                 ))}
             </div>
