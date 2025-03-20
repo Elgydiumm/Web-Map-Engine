@@ -187,11 +187,6 @@ const ImageZoomInOut: React.FC<ImageZoomInOutProps> = ({ imageUrl, menuItems, on
             <div className="btn-container">
                 <button onClick={handleZoomIn}><AddIcon/></button>
                 <button onClick={handleZoomOut}><RemoveIcon/></button>
-                <ul>
-                    {mapItems.map((item, index) => (
-                        <li key={index}>{item.type} | {Math.round(item.location.x)} {Math.round(item.location.y)}</li>
-                    ))}
-                </ul>
             </div>
 
             <div style={{
